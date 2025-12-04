@@ -1,13 +1,13 @@
 apply plugin: 'java'
 
 dependencies {
-    compile project(":lancet-base")
-    testCompile project(":lancet-plugin")
-    testCompile "com.android.tools.build:gradle:$android_tools_version"
-    testCompile "junit:junit:4.12"
-    testCompile 'com.squareup.okio:okio:1.11.0'
-    testCompile 'org.assertj:assertj-core:3.6.2'
-    testCompile 'org.mockito:mockito-core:2.8.47'
+    implementation project(":lancet-base")
+    testImplementation project(":lancet-plugin")
+    testImplementation "com.android.tools.build:gradle:$android_tools_version"
+    testImplementation "junit:junit:4.12"
+    testImplementation 'com.squareup.okio:okio:1.11.0'
+    testImplementation 'org.assertj:assertj-core:3.6.2'
+    testImplementation 'org.mockito:mockito-core:2.8.47'
 }
 
 
@@ -21,5 +21,5 @@ task executeTestSampleProduct(type:JavaExec) {
     classpath = files('build/product/java/main')
 }
 
-sourceCompatibility = "1.8"
-targetCompatibility = "1.8"
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8

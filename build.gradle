@@ -3,18 +3,25 @@ apply plugin: 'base'
 buildscript {
     ext {
         Properties properties = new Properties()
-        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        File localPropsFile = project.rootProject.file('local.properties')
+        if (localPropsFile.exists()) {
+            properties.load(localPropsFile.newDataInputStream())
+        }
 
-        ele = true
         ele = "true" == properties.getProperty("ele")
 
-        if (!ele) {
-            bintrayUser = properties.getProperty('bintrayUser')
-            bintrayKey = properties.getProperty('bintrayKey')
-        }
-        lancet_group = 'me.ele'
-        lancet_version = '1.0.6'
-        //lancet_version = '0.0.1.8-SNAPSHOT'
+        // GitHub Packages publishing credentials (for non-ele builds)
+        // You can set these in local.properties (recommended) or rely on
+        // environment variables GITHUB_ACTOR / GITHUB_TOKEN.
+        gprUser = properties.getProperty('gpr.user') ?: System.getenv("GITHUB_ACTOR")
+        gprKey = properties.getProperty('gpr.key') ?: System.getenv("GITHUB_TOKEN")
+        // 仓库名默认使用当前项目名，你也可以在 local.properties 里通过 gpr.repo 覆盖
+        gprRepo = properties.getProperty('gpr.repo') ?: rootProject.name
+        // 你自己的 Maven 坐标前缀（groupId），避免再用原来的 me.ele
+        // 注意：groupId 必须是合法的 Java 包名，不能包含连字符 -
+        lancet_group = 'io.github.zkbzywq.lancet'
+        // 你的 fork 使用新的版本号，避免和上游/历史发布冲突
+        lancet_version = '1.0.7'
 
         asm_version = '5.1'
         //android_tools_version = '2.4.0-alpha6'
@@ -22,21 +29,11 @@ buildscript {
         guava_version = '24.0'
     }
     repositories {
-        jcenter()
         mavenCentral()
-        maven {
-            if (ele) {
-                url "http://maven.dev.elenet.me/nexus/content/groups/public"
-            } else {
-                url "https://dl.bintray.com/eleme-mt-arch/maven"
-            }
-        }
     }
     dependencies {
         if (ele) {
             classpath 'me.ele:eradle:1.7.0'
-        } else {
-            classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
         }
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -46,17 +43,19 @@ buildscript {
 subprojects { pro ->
 
     repositories {
-        jcenter()
         mavenCentral()
-        maven {
-            url 'https://maven.google.com'
-        }
+        google()
     }
 
     if (pro.name == 'sample-test')return
 
     version = lancet_version
     group = lancet_group
+
+    // 禁用严格的 Javadoc Doclint，避免因为缺少注释导致构建失败（JDK 8+ 默认很严格）
+    tasks.withType(Javadoc).configureEach { javadocTask ->
+        javadocTask.options.addStringOption('Xdoclint:none', '-quiet')
+    }
 
     if (ele) {
         apply plugin: 'eradle'
@@ -72,16 +71,16 @@ subprojects { pro ->
             sources = true
         }
     } else {
-        apply plugin: 'maven'
-        apply plugin: 'com.jfrog.bintray'
+        // 使用标准 maven-publish 插件发布到 GitHub Packages
+        apply plugin: 'maven-publish'
         afterEvaluate {
             task sourcesJar(type: Jar) {
                 from sourceSets.main.java.srcDirs
-                classifier = 'sources'
+                archiveClassifier = 'sources'
             }
 
             task javadocJar(type: Jar, dependsOn: javadoc) {
-                classifier = 'javadoc'
+                archiveClassifier = 'javadoc'
                 from javadoc.destinationDir
             }
 
@@ -89,47 +88,55 @@ subprojects { pro ->
                 archives sourcesJar
                 archives javadocJar
             }
-            tasks.install {
-                repositories.mavenInstaller {
-                    pom {
-                        project {
-                            packaging 'jar'
+            publishing {
+                publications {
+                    mavenJava(MavenPublication) {
+                        from components.java
+
+                        groupId = lancet_group
+                        artifactId = pro.name
+                        version = lancet_version
+
+                        artifact sourcesJar
+                        artifact javadocJar
+
+                        pom {
+                            packaging = 'jar'
+                            name = pro.name
+                            description = 'Lancet AOP library'
+                            url = "https://github.com/${gprUser}/${gprRepo}"
                             licenses {
                                 license {
-                                    name 'The Apache Software License, Version 2.0'
-                                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                                    name = 'The Apache Software License, Version 2.0'
+                                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
                                 }
                             }
                             developers {
                                 developer {
-                                    id 'dieyidezui'
-                                    name '耿万鹏'
-                                    email 'dieyidezui@gmail.com'
+                                    id = 'dieyidezui'
+                                    name = '耿万鹏'
+                                    email = 'dieyidezui@gmail.com'
                                 }
                                 developer {
-                                    id 'jude95'
-                                    name '朱晨曦'
-                                    email '973829691@qq.com'
+                                    id = 'jude95'
+                                    name = '朱晨曦'
+                                    email = '973829691@qq.com'
                                 }
                             }
                         }
                     }
                 }
-            }
-        }
-        bintray {
-            user = bintrayUser
-            key = bintrayKey
-            configurations = ['archives']
-            pkg {
-                userOrg = "eleme-mt-arch"
-                repo = "maven"
-                userOrg = "eleme-mt-arch"
-                name = pro.name    //发布到JCenter上的项目名字
-                websiteUrl = "https://github.com/eleme/lancet"
-                vcsUrl = "git@github.com:eleme/lancet.git"
-                licenses = ["Apache-2.0"]
-                publish = true
+
+                repositories {
+                    maven {
+                        name = "GitHubPackages"
+                        url = uri("https://maven.pkg.github.com/${gprUser}/${gprRepo}")
+                        credentials {
+                            username = gprUser
+                            password = gprKey
+                        }
+                    }
+                }
             }
         }
     }
@@ -147,7 +154,7 @@ task uploadAll { task ->
 
         project.subprojects {
             if (it.name != 'sample-test') {
-                Task upload = !ele ? it.tasks.bintrayUpload : it.tasks.uploadArchives;
+                    Task upload = !ele ? it.tasks.publish : it.tasks.uploadArchives;
                 task.dependsOn upload
                 upload.mustRunAfter project.tasks.build
             }

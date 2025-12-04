@@ -1,3 +1,14 @@
+# Ignore Gradle build outputs
+build/
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+
+# Local configuration (contains secrets like GitHub tokens)
+local.properties
+
 # Eclipse
 .classpath
 .project

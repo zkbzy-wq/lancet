@@ -1,18 +1,18 @@
 apply plugin: 'java'
 
 dependencies {
-    testCompile "junit:junit:4.12"
-    testCompile 'com.squareup.okio:okio:1.11.0'
-    testCompile 'org.assertj:assertj-core:3.6.2'
+    testImplementation "junit:junit:4.12"
+    testImplementation 'com.squareup.okio:okio:1.11.0'
+    testImplementation 'org.assertj:assertj-core:3.6.2'
 
-    compileClasspath "com.android.tools.build:gradle:$android_tools_version"
-    compile project(':lancet-base')
-    compile gradleApi()
-    compileClasspath "com.google.guava:guava:$guava_version"
-    compile "org.ow2.asm:asm-all:$asm_version"
+    // AGP / Guava 只作为编译期 classpath 依赖，不打进最终产物
+    compileOnly "com.android.tools.build:gradle:$android_tools_version"
+    implementation project(':lancet-base')
+    implementation gradleApi()
+    compileOnly "com.google.guava:guava:$guava_version"
+    implementation "org.ow2.asm:asm-all:$asm_version"
 }
 
-sourceCompatibility = "1.8"
-targetCompatibility = "1.8"
-
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
