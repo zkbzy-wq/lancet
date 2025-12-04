@@ -27,7 +27,7 @@ public class ProxyMethodVisitor extends MethodVisitor {
     private final MethodChain chain;
 
     public ProxyMethodVisitor(MethodChain chain, MethodVisitor mv, Map<String, MethodChain.Invoker> invokerMap, Map<String, List<ProxyInfo>> matchMap, String className, String name, ClassCollector classCollector) {
-        super(Opcodes.ASM5, mv);
+        super(Opcodes.ASM6, mv);
         this.chain = chain;
         this.invokerMap = invokerMap;
         this.matchMap = matchMap;

@@ -7,3 +7,7 @@ dependencies {
 // 统一使用 Java 8，兼容 JDK 11+ / Android
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
+
+// 统一使用 Java 8，兼容 JDK 11+ / Android
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8

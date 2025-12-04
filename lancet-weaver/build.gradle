@@ -10,7 +10,10 @@ dependencies {
     implementation project(':lancet-base')
     implementation gradleApi()
     compileOnly "com.google.guava:guava:$guava_version"
-    implementation "org.ow2.asm:asm-all:$asm_version"
+    // ASM 6.x: use split artifacts instead of asm-all
+    implementation "org.ow2.asm:asm:$asm_version"
+    implementation "org.ow2.asm:asm-tree:$asm_version"
+    implementation "org.ow2.asm:asm-util:$asm_version"
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8

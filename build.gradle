@@ -21,9 +21,9 @@ buildscript {
         // 注意：groupId 必须是合法的 Java 包名，不能包含连字符 -
         lancet_group = 'io.github.zkbzywq.lancet'
         // 你的 fork 使用新的版本号，避免和上游/历史发布冲突
-        lancet_version = '1.0.7'
+        lancet_version = '1.1.7'
 
-        asm_version = '5.1'
+        asm_version = '6.2.1'
         //android_tools_version = '2.4.0-alpha6'
         android_tools_version = '3.3.2'
         guava_version = '24.0'

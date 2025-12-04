@@ -42,6 +42,23 @@ public class TransformProcessor implements ClassFetcher {
         if (content instanceof JarInput) {
             JarInput jarInput = (JarInput) content;
             File targetFile = context.getRelativeFile(content);
+
+            // lancet-base 是编译期/运行期基础库，本身不会被织入，且旧版 D8 对其 class 有兼容性问题。
+            // 对该 jar，我们在 transform 阶段直接丢弃，不参与后续 dex 编译（annotations/Origin/This 仅在编译期使用，一般不会在运行期反射）。
+            if (isLancetBaseJar(jarInput)) {
+                switch (jarInput.getStatus()) {
+                    case REMOVED:
+                        FileUtils.deleteIfExists(targetFile);
+                        break;
+                    case CHANGED:
+                    default:
+                        FileUtils.deleteIfExists(targetFile);
+                        break;
+                }
+                // 返回 false，JarContentProvider 将不会遍历该 jar 的 entry，也不会在输出中生成对应 jar。
+                return false;
+            }
+
             switch (jarInput.getStatus()) {
                 case REMOVED:
                     FileUtils.deleteIfExists(targetFile);
@@ -82,7 +99,10 @@ public class TransformProcessor implements ClassFetcher {
     @Override
     public void onComplete(QualifiedContent content) throws IOException {
         if (content instanceof JarInput && ((JarInput) content).getStatus() != Status.REMOVED) {
-            map.get(content).close();
+            JarRunner runner = map.get(content);
+            if (runner != null) {
+                runner.close();
+            }
         }
     }
 
@@ -102,6 +122,9 @@ public class TransformProcessor implements ClassFetcher {
                 ZipEntry entry = new ZipEntry(relativePath);
                 jos.putNextEntry(entry);
                 jos.write(bytes);
+            } else if (shouldBypassWeaving(relativePath)) {
+                // 基础库 class：不做织入，也不写入输出 jar（等同于 provided 依赖）
+                return;
             } else {
                 for (ClassData classData : weaver.weave(bytes, relativePath)) {
                     ZipEntry entry = new ZipEntry(classData.getClassName() + ".class");
@@ -119,11 +142,27 @@ public class TransformProcessor implements ClassFetcher {
     class DirectoryRunner {
 
         void run(File relativeRoot, String relativePath, byte[] bytes) throws IOException {
+            if (shouldBypassWeaving(relativePath)) {
+                // 基础库 class：在目录输出中也不写入，保持其为纯编译期依赖
+                return;
+            }
+
             for (ClassData data : weaver.weave(bytes, relativePath)) {
                 File target = Util.toSystemDependentFile(relativeRoot, data.getClassName() + ".class");
                 Files.createParentDirs(target);
                 Files.write(data.getClassBytes(), target);
             }
         }
+    }
+
+    private static boolean isLancetBaseJar(JarInput jarInput) {
+        String name = jarInput.getFile().getName();
+        // 通过文件名判断，目前发布的 artifact 形如 lancet-base-<version>.jar
+        return name.startsWith("lancet-base-");
+    }
+
+    private static boolean shouldBypassWeaving(String relativePath) {
+        // 路径以 jar entry 形式出现，统一用 '/'
+        return relativePath.startsWith("me/ele/lancet/base/");
     }
 }
